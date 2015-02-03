@@ -17,13 +17,62 @@ buildscript {
 
 apply plugin: 'forge'
 
-version = "1.0"
-group= "com.yourname.modid" // http://maven.apache.org/guides/mini/guide-naming-conventions.html
+//ext.buildnumber = 0
+//if (System.getenv('BUILD_NUMBER') != null)
+//    project.buildnumber = System.getenv('BUILD_NUMBER')
+//if(System.getenv('DRONE_BUILD_NUMBER') != null)
+//    project.buildnumber = System.getenv('DRONE_BUILD_NUMBER')
+//else
+//    logger.lifecycle "No build number detected, setting to 0"
+
+/*
+ * Gets the version name from the latest Git tag
+ */
+def getVersionCode = { ->
+    try {
+        def stdout = new ByteArrayOutputStream()
+        exec {
+            commandLine 'git', 'rev-list', '--first-parent', '--count', 'HEAD'
+            standardOutput = stdout
+        }
+        return Integer.parseInt(stdout.toString().trim())
+    }
+    catch (ignored) {
+        return null;
+    }
+}
+
+def getVersionName = { ->
+    try {
+        def stdout = new ByteArrayOutputStream()
+        exec {
+            commandLine 'git', 'describe', '--tags', '--dirty'
+            standardOutput = stdout
+        }
+        return stdout.toString().trim()
+    }
+    catch (ignored) {
+        return null;
+    }
+}
+
+ext.mod_version = getVersionName() ?: 0;
+ext.buildnumber = getVersionCode() ?: 0;
+
+version = "${minecraft_version}-${mod_version}.${buildnumber}"
+group = "com.yourname.modid" // http://maven.apache.org/guides/mini/guide-naming-conventions.html
 archivesBaseName = "modid"
 
+if (project.hasProperty('mod_appendix'))
+    version += "_${project.mod_appendix}"
+
 minecraft {
-    version = "1.7.10-10.13.2.1291"
-    runDir = "eclipse"
+    version = "${minecraft_version}-${forge_version}"
+    runDir = "run"
+
+    replace "@MC_VERSION@", project.minecraft.version
+    replace "@VERSION@", project.version
+    replaceIn "ExampleMod.java"
 }
 
 dependencies {
@@ -31,7 +80,7 @@ dependencies {
     // or you may define them like so..
     //compile "some.group:artifact:version:classifier"
     //compile "some.group:artifact:version"
-      
+
     // real examples
     //compile 'com.mod-buildcraft:buildcraft:6.0.8:dev'  // adds buildcraft to the dev env
     //compile 'com.googlecode.efficient-java-matrix-library:ejml:0.24' // adds ejml to the dev env
@@ -42,8 +91,28 @@ dependencies {
 
 }
 
-processResources
-{
+task deobfJar(type: Jar) {
+    from sourceSets.main.output
+    classifier = 'deobf'
+}
+
+task sourcesJar(type: Jar, dependsOn: classes) {
+    classifier = 'sources'
+    from sourceSets.main.allSource
+}
+
+task javadocJar(type: Jar, dependsOn: javadoc) {
+    classifier = 'javadoc'
+    from javadoc.destinationDir
+}
+
+artifacts {
+    archives sourcesJar
+    archives deobfJar
+    archives javadocJar
+}
+
+processResources {
     // this will ensure that this task is redone when the versions change.
     inputs.property "version", project.version
     inputs.property "mcversion", project.minecraft.version
@@ -51,11 +120,11 @@ processResources
     // replace stuff in mcmod.info, nothing else
     from(sourceSets.main.resources.srcDirs) {
         include 'mcmod.info'
-                
+
         // replace version and mcversion
-        expand 'version':project.version, 'mcversion':project.minecraft.version
+        expand 'version': project.version, 'mcversion': project.minecraft.version
     }
-        
+
     // copy everything else, thats not the mcmod.info
     from(sourceSets.main.resources.srcDirs) {
         exclude 'mcmod.info'
