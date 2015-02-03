@@ -46,10 +46,11 @@ def getVersionName = { ->
     try {
         def stdout = new ByteArrayOutputStream()
         exec {
-            commandLine 'git', 'describe', '--tags', '--dirty'
+            commandLine 'git', 'describe', '--tags' //, '--dirty'
             standardOutput = stdout
         }
-        return stdout.toString().trim()
+        //release/1.0-dirty
+        return stdout.toString().trim().repalce('release/', '')
     }
     catch (ignored) {
         return null;
