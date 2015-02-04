@@ -46,17 +46,18 @@ def getVersionName = { ->
     try {
         def stdout = new ByteArrayOutputStream()
         exec {
-            commandLine 'git', 'describe', '--tags' //, '--dirty'
+            commandLine 'git', 'describe', '--tags', '--dirty'
             standardOutput = stdout
         }
-        //release/1.0-dirty
         return stdout.toString().repalceFirst(/^release\//, "").trim()
+//        return stdout.toString().trim()
     }
     catch (ignored) {
         return null;
     }
 }
 
+println getVersionName();
 ext.mod_version = getVersionName() ?: 0;
 ext.buildnumber = getVersionCode() ?: 0;
 
