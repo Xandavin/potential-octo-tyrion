@@ -49,8 +49,7 @@ def getVersionName = { ->
             commandLine 'git', 'describe', '--tags', '--dirty'
             standardOutput = stdout
         }
-        return stdout.toString().repalceFirst(/^release\//, "").trim()
-//        return stdout.toString().trim()
+        return stdout.toString().replaceAll("release/","").trim()
     }
     catch (ignored) {
         return null;
