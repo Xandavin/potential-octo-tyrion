@@ -56,7 +56,6 @@ def getVersionName = { ->
     }
 }
 
-println getVersionName();
 ext.mod_version = getVersionName() ?: 0;
 ext.buildnumber = getVersionCode() ?: 0;
 
